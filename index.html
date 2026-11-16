@@ -16,7 +16,7 @@
 <link rel="manifest" href="manifest.json">
     <title>共通支出家計簿</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=20261116-3">
+    <link rel="stylesheet" href="style.css?v=20261116-4">
   </head>
   <body>
     <div id="app">
@@ -111,11 +111,6 @@
               </div>
             </div>
 
-            <div class="amount-display" id="amount-display">
-              <div class="expr tnum" id="amount-expr"></div>
-              <div class="amt tnum"><small>¥</small><span id="amount-value">0</span></div>
-            </div>
-
             <p class="ctl-label">支払った人</p>
             <div class="payer-toggle" id="payer-toggle"></div>
 
@@ -136,6 +131,10 @@
             </div>
           </div>
 
+          <div class="amount-display" id="amount-display">
+            <div class="expr tnum" id="amount-expr"></div>
+            <div class="amt tnum"><small>¥</small><span id="amount-value">0</span></div>
+          </div>
           <div class="keypad" role="group" aria-label="金額入力キーパッド">
             <button class="key" data-key="7">7</button>
             <button class="key" data-key="8">8</button>
@@ -306,13 +305,13 @@
 
     <div id="toast" role="status"></div>
 
-    <script src="core.js?v=20261116-3"></script>
-    <script src="data.js?v=20261116-3"></script>
-    <script src="input.js?v=20261116-3"></script>
+    <script src="core.js?v=20261116-4"></script>
+    <script src="data.js?v=20261116-4"></script>
+    <script src="input.js?v=20261116-4"></script>
 
-    <script src="history.js?v=20261116-3"></script>
-    <script src="settings.js?v=20261116-3"></script>
-    <script src="sheet.js?v=20261116-3"></script>
-    <script src="app.js?v=20261116-3"></script>
+    <script src="history.js?v=20261116-4"></script>
+    <script src="settings.js?v=20261116-4"></script>
+    <script src="sheet.js?v=20261116-4"></script>
+    <script src="app.js?v=20261116-4"></script>
   </body>
 </html>
