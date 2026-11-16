@@ -808,3 +808,48 @@ input[type="color"] { width: 42px; height: 42px; padding: 3px; border: 1px solid
 button, input, select, textarea, [role="button"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .icon-btn, .mini-btn { user-select: none; -webkit-user-select: none; }
 th, td, label, .badge, .tab-btn { word-break: keep-all; overflow-wrap: anywhere; }
+
+/* ---------- 履歴タブ：セグメント切替 ---------- */
+.seg-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  background: var(--surface-2);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  margin-bottom: 12px;
+  position: sticky;
+  top: 8px;
+  z-index: 6;
+  box-shadow: 0 4px 14px rgba(17, 24, 19, 0.06);
+}
+.seg-control button {
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  min-height: 40px;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 14px;
+  padding: 6px 4px;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+.seg-control button.on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 -2.5px 0 var(--accent);
+}
+.seg-control.mini {
+  grid-template-columns: 1fr 1fr;
+  position: static;
+  margin: 0;
+  box-shadow: none;
+}
+.seg-control.mini button { min-height: 34px; font-size: 13px; }
+.brk-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.brk-head h3 { margin: 0; }
+.brk-head .seg-control { flex: 0 0 196px; }
+.fc-sep { border-top: 1px solid var(--line); margin: 14px 0 12px; }
+.fc-head { font-size: 14px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
