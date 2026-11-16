@@ -72,6 +72,47 @@ function settleAdvance(id, btn) {
       if (btn) btn.disabled = false;
     });
 }
+// 今月の月末着地予測（当月表示時のみ使う）。
+// 固定費は未計上の自動計上分（recurring）を加算し、それ以外の支出は
+// 経過日数の日割り平均 × 残り日数で推計する。now はテスト用に差し替え可能。
+function computeForecast(txs, now) {
+  now = now || new Date();
+  var key = monthKey(now);
+  var range = monthRange(key);
+  var elapsed = now.getDate();
+  var remaining = range.lastDay - elapsed;
+  var totalUsed = sumByKind(txs, 'expense');
+  var fixedPosted = 0;
+  var postedIds = {};
+  txs.forEach(function (t) {
+    if (t.external_id) postedIds[t.external_id] = true;
+    if (t.source === 'fixed_auto' && txKind(t) === 'expense' && !t.is_advance) fixedPosted += t.amount || 0;
+  });
+  var upcomingFixed = 0, upcomingSaving = 0;
+  state.recurring.forEach(function (re) {
+    if (!re.is_active) return;
+    if (postedIds['fixed_' + re.id + '_' + key]) return;
+    var c = categoryById(re.category_id);
+    var k = c ? catKind(c) : 'expense';
+    if (k === 'expense') upcomingFixed += re.amount || 0;
+    else if (k === 'saving') upcomingSaving += re.amount || 0;
+  });
+  var variableSpent = Math.max(0, totalUsed - fixedPosted);
+  var projectedVariable = elapsed > 0 ? Math.round(variableSpent / elapsed * remaining) : 0;
+  var savingTotal = sumByKind(txs, 'saving');
+  var budget = categoryBudgetTotal();
+  var allowance = budget - totalUsed - upcomingFixed;
+  return {
+    elapsed: elapsed, remaining: remaining, lastDay: range.lastDay,
+    totalUsed: totalUsed, fixedPosted: fixedPosted,
+    upcomingFixed: upcomingFixed, upcomingSaving: upcomingSaving,
+    variableSpent: variableSpent, projectedVariable: projectedVariable,
+    projectedTotal: totalUsed + upcomingFixed + projectedVariable,
+    budget: budget, allowance: allowance,
+    perDay: remaining > 0 ? Math.floor(allowance / remaining) : allowance,
+    savingTotal: savingTotal, savingProjected: savingTotal + upcomingSaving
+  };
+}
 function renderHistory() {
   var key = monthKey(state.viewMonth);
   var y = state.viewMonth.getFullYear(), m = state.viewMonth.getMonth() + 1;
@@ -137,6 +178,36 @@ function renderHistory() {
       '<div class="big-total"><span class="used tnum">' + fmtYen(totalUsed) + '</span><span class="of tnum">/ 予算 ' + fmtYen(totalBudget) + '</span></div>' +
       '<div class="bar"><i class="' + (totalUsed > totalBudget && totalBudget > 0 ? 'over' : '') + '" style="width:' + totalPct + '%"></i></div>' +
       '<div class="remain-line tnum">残り <b class="' + (totalRemain < 0 ? 'neg' : '') + '">' + fmtYen(totalRemain) + '</b>（消化率 ' + (totalBudget > 0 ? Math.round(totalUsed / totalBudget * 100) : 0) + '%）</div></div>';
+
+    // 今月の予測（当月を表示している場合のみ）
+    if (key === monthKey(new Date())) {
+      var fc = computeForecast(txs);
+      var fcPct = fc.budget > 0 ? Math.min(100, Math.round(fc.projectedTotal / fc.budget * 100)) : (fc.projectedTotal > 0 ? 100 : 0);
+      html += '<div class="card"><h3>今月の予測（月末の着地）</h3>' +
+        '<div class="big-total"><span class="used tnum">' + fmtYen(fc.projectedTotal) + '</span>' +
+        (fc.budget > 0 ? '<span class="of tnum">/ 予算 ' + fmtYen(fc.budget) + '</span>' : '') + '</div>' +
+        '<div class="bar"><i class="' + (fc.budget > 0 && fc.projectedTotal > fc.budget ? 'over' : '') + '" style="width:' + fcPct + '%"></i></div>' +
+        '<div class="remain-line tnum">内訳：ここまでの支出 ' + fmtYen(fc.totalUsed) + ' ＋ 固定費（未計上）' + fmtYen(fc.upcomingFixed) + ' ＋ 変動費のペース ' + fmtYen(fc.projectedVariable) + '</div>';
+      if (fc.budget > 0) {
+        if (fc.allowance >= 0) {
+          html += '<div class="remain-line tnum">予算まであと <b>' + fmtYen(fc.allowance) + '</b>' +
+            (fc.remaining > 0 ? '（残り' + fc.remaining + '日・1日あたり <b>' + fmtYen(fc.perDay) + '</b> まで）' : '（本日が月末です）') + '</div>';
+        } else {
+          html += '<div class="remain-line tnum">このペースだと予算を <b class="neg">' + fmtYen(Math.abs(fc.allowance)) + '</b> 超える見込みです</div>';
+        }
+      }
+      if (fc.savingProjected > 0) {
+        html += '<div class="remain-line tnum">貯蓄・投資の着地予測 <b>' + fmtYen(fc.savingProjected) + '</b>' +
+          (fc.upcomingSaving > 0 ? '（自動積立の未計上分 ' + fmtYen(fc.upcomingSaving) + ' を含む）' : '') + '</div>';
+      }
+      if (goalAmt != null && Number(goalAmt) > 0 && savingsData) {
+        var fcStart = Number(state.household.savings_start_amount) || 0;
+        var monthEndTotal = fcStart + savingsData.total + fc.upcomingSaving;
+        var monthEndPct = Math.min(100, Math.round(monthEndTotal / Number(goalAmt) * 100));
+        html += '<div class="remain-line tnum">月末時点の資産見込み <b>' + fmtYen(monthEndTotal) + '</b>（目標の ' + monthEndPct + '%）</div>';
+      }
+      html += '<div class="goal-note">固定費は未計上の自動計上分を加算し、それ以外の支出は経過' + fc.elapsed + '日の日割り平均で計算しています。月の前半は予測が大きく振れます。</div></div>';
+    }
 
     // カテゴリ別（種別ごとにグループ化）
     html += '<div class="card"><h3>カテゴリ別</h3>';
